@@ -2,7 +2,7 @@
 .idea/
 __pycache__/
 *.pyc
-migrations/
+.env
 
 *.log
 *.log.*
