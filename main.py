@@ -1,90 +1,121 @@
-# import asyncio
-# from config.config import settings
-# from sqlalchemy.ext.asyncio import create_async_engine
-#
-# # from config.session import engine
-# from sqlalchemy.ext.declarative import declarative_base
-# from sqlalchemy.ext.asyncio import AsyncSession
-# from sqlalchemy.ext.asyncio import create_async_engine
-# from sqlalchemy.orm import sessionmaker
-from model import OrderModel, TariffOrderModel
-
-from sqlalchemy.future import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import sessionmaker
-
-import asyncio
-
-from sqlalchemy import Column
-from sqlalchemy import DateTime
-from sqlalchemy import ForeignKey
-from sqlalchemy import func
-from sqlalchemy import Integer
-from sqlalchemy import String
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.future import select
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy import inspect
 from sqlalchemy.orm import selectinload
-from sqlalchemy.orm import sessionmaker
 
-# print(settings.DB_URL)
+from config.config_log import logger
+from config.session import async_session, engine
+from model import UserModel, ChatRoomModel, MessageModel
 
-# DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost/asyncalchemy"
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/async_python_sprint_3"
+from sqlalchemy.future import select
 
 import asyncio
 
-from sqlalchemy.ext.asyncio import create_async_engine
+from server import Server
 
 
-async def async_main():
-    engine = create_async_engine(
-        DATABASE_URL, echo=True,
-    )
+async def async_main_server():
+    await init_data()
 
-    async_session = sessionmaker(
-        engine, expire_on_commit=False, class_=AsyncSession
-    )
+    server = Server()
 
-    # async with engine.begin() as conn:
-    async with async_session() as session:
-        async with session.begin():
-            # await conn.run_sync(meta.drop_all)
-            # await conn.run_sync(meta.create_all)
-            print(type(session))
-            tariffs = []
-            for i in range(5):
-                tariffs.append(
-                    TariffOrderModel(
-                        type=f'type{i}',
-                        tariff_concat_code=f'tariff_concat_code{i}'
-                    )
-                )
+    await server.main()
 
-            session.add_all(tariffs)
 
-            stmt = select(TariffOrderModel)#.options(selectinload(A.bs))
 
-            result = await session.execute(stmt)
 
-            for a1 in result.scalars():
-                print(a1)
+async def init_data():
+    # session = get_db_session()
+    async with async_session() as session, session.begin():
+        # print(type(session))
 
-            result = await session.execute(select(TariffOrderModel).order_by(TariffOrderModel.id))
+        # Создаем тестового пользователя
 
-            a1 = result.scalars().first()
+        # users = []
+        # for i in range(5):
+        #     users.append(
+        #         UserModel(
+        #             name=f'user_name{i}',
+        #         )
+        #     )
+        #
+        # session.add_all(users)
 
-            print(a1.type)
+        thing_relations = inspect(UserModel).relationships.items()
+        # stmt = select(UserModel, MessageModel).join(UserModel, UserModel.id==MessageModel.author_id)#.options(selectinload(MessageModel))
+        stmt = select(UserModel).options(selectinload(UserModel.messages))
 
-            a1.type = "new data"
+        user_list = await session.execute(stmt)
 
-            print(a1.type)
+        users_list_obj = []
 
-            await session.commit()
+        for a1 in user_list.scalars():
+            users_list_obj.append(a1)
 
-            print(a1.type)
+        logger.info(f'user {len(users_list_obj)}')
+
+        # Создаем тестовый чат
+
+        # chat_rooms = []
+        # for i in range(2):
+        #     chat_rooms.append(
+        #         ChatRoomModel(
+        #             name=f'chat_room_name{i}',
+        #         )
+        #     )
+        #
+        # session.add_all(chat_rooms)
+
+        stmt = select(ChatRoomModel).options(selectinload(ChatRoomModel.messages))
+
+        chat_room_list = await session.execute(stmt)
+
+        chat_room_list_obj = []
+
+        for a1 in chat_room_list.scalars():
+            chat_room_list_obj.append(a1)
+
+        logger.info(f'chat_rooms {len(chat_room_list_obj)}')
+
+        # Создаем тестовые сообщения
+
+        # messages = []
+        # for i in range(200):
+        #     messages.append(
+        #         MessageModel(
+        #             message=f'chat_room_name{i}',
+        #             chat_room_id=chat_room_list_obj[i % len(chat_room_list_obj)].id,
+        #             author_id=users_list_obj[i % len(users_list_obj)].id
+        #         )
+        #     )
+        #
+        # session.add_all(messages)
+
+        stmt = select(MessageModel)  # .options(selectinload(A.bs))
+
+        messages_list = await session.execute(stmt)
+
+        messages_list_obj = []
+
+        for a1 in messages_list.scalars():
+            messages_list_obj.append(a1)
+
+        logger.info(f'messages {len(messages_list_obj)}')
+
+        # for a1 in result.scalars():
+        #     print(a1)
+        #
+        # result = await session.execute(select(TariffOrderModel).order_by(TariffOrderModel.id))
+        #
+        # a1 = result.scalars().first()
+        #
+        # print(a1.type)
+        #
+        # a1.type = "new data"
+        #
+        # print(a1.type)
+
+        await session.commit()
+
+        # print(a1.type)
 
         # await conn.add(OrderModel)
         # await conn.query(OrderModel).all()
@@ -93,16 +124,16 @@ async def async_main():
         #     t1.insert(), [{"name": "some name 1"}, {"name": "some name 2"}]
         # )
 
-    # async with engine.connect() as conn:
-    #     # select a Result, which will be delivered with buffered
-    #     # results
-    #     result = await conn.execute(select(t1).where(t1.c.name == "some name 1"))
-    #
-    #     print(result.fetchall())
+        # async with engine.connect() as conn:
+        #     # select a Result, which will be delivered with buffered
+        #     # results
+        #     result = await conn.execute(select(t1).where(t1.c.name == "some name 1"))
+        #
+        #     print(result.fetchall())
 
-    # for AsyncEngine created in function scope, close and
-    # clean-up pooled connections
-    await engine.dispose()
+        # for AsyncEngine created in function scope, close and
+        # clean-up pooled connections
+        # await engine.dispose()
 
 
-asyncio.run(async_main())
+asyncio.run(async_main_server())

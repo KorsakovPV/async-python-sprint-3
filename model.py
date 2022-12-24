@@ -1,10 +1,26 @@
-from sqlalchemy import VARCHAR, Column, DateTime, sql, text
+from sqlalchemy import VARCHAR, Column, DateTime, sql, text, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import as_declarative
-from sqlalchemy.orm import declared_attr
+from sqlalchemy.orm import declared_attr, relationship
 from sqlalchemy.sql import func
 from sqlalchemy import BOOLEAN, INTEGER, VARCHAR, Column, Date, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+# from __future__ import annotations
+
+import asyncio
+import datetime
+
+from sqlalchemy import ForeignKey
+from sqlalchemy import func
+from sqlalchemy import select
+# from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine
+# from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import Mapped
+# from sqlalchemy.orm import mapped_column
+from sqlalchemy.orm import relationship
+from sqlalchemy.orm import selectinload
 
 
 @as_declarative()
@@ -23,45 +39,44 @@ class Base:
         return cls.__name__.lower()
 
 
-class TariffOrderModel(Base):
-    __tablename__ = 'order_tariffs'
+class UserModel(Base):
+    __tablename__ = 'users'
 
-    type = Column(VARCHAR(255), nullable=False)
-    tariff_concat_code = Column(VARCHAR(255), nullable=False)
-
-    def __repr__(self):
-        return f'{self.type} - {self.tariff_concat_code}'
+    name = Column(VARCHAR(255), nullable=False)
+    messages = relationship('MessageModel', backref='user')
+    comments = relationship('CommentModel', backref='user')
 
 
-class OrderModel(Base):
-    __tablename__ = 'order'
 
-    order_form_number = Column(VARCHAR(255), nullable=False, comment='Номер бланка заказа')
-    order_form_date = Column(Date(), nullable=True, comment='Дата бланка заказа')
-    contract_number = Column(VARCHAR(255), nullable=False, comment='Номер договора')
-    contract_date = Column(Date(), nullable=True, comment='Дата заключения договора')
-    service = Column(VARCHAR(255), nullable=False, comment='Услуга')
-    type_order_prod = Column(BOOLEAN, nullable=False, default=True, comment='')
-    authorized_persons_of_the_contractor = Column(JSONB, comment='Уполномоченные лица исполнителя')
-    authorized_persons_of_the_customer = Column(JSONB, comment='Уполномоченные лица заказчика')
-    technical_parameters_of_the_services = Column(JSONB, comment='Технические параметры услуг')
-    tariffs = Column(JSONB, comment='Тарифы БЗ')
-    date_of_technological_readiness_of_services = Column(
-        Date(), nullable=True,
-        comment='Дата технологической готовности оказания услуги'
-    )
-    service_billing_start_date = Column(Date(), nullable=True, comment='')
-    service_billing_stop_date = Column(Date(), nullable=True, comment='')
-    initial_term_of_service_provision = Column(INTEGER(), nullable=False, comment='')
-    service_source = Column(VARCHAR(255), nullable=False, comment='Где описана услуга')
-    special_pricing_conditions_for_services = Column(Text(), comment='')
-    signatories = Column(JSONB, comment='Подписанты')
-    consumer_organization = Column(VARCHAR(255), nullable=False, comment='Организация заказчика')
-    template_form = Column(VARCHAR(255), nullable=False, comment='')
-    template_blank = Column(VARCHAR(255), nullable=False, comment='')
-    active = Column(BOOLEAN, nullable=False, default=True, comment='')
-    previous_order_for = Column(UUID(as_uuid=True), nullable=True, comment='')
-    next_order_form = Column(UUID(as_uuid=True), nullable=True, comment='')
+class ChatRoomModel(Base):
+    __tablename__ = 'chat_rooms'
+
+    name = Column(VARCHAR(255), nullable=False)
+    messages = relationship('MessageModel', backref='chat')
 
     def __repr__(self):
-        return f'Сервис ({self.service}). Заказ {self.order_form_number}'
+        return f'ChatRoom {self.name}'
+
+
+class MessageModel(Base):
+    __tablename__ = 'messages'
+
+    message = Column(VARCHAR(255), nullable=False)
+    chat_room_id = Column(UUID(as_uuid=True), ForeignKey('chat_rooms.id'))
+    author_id = Column(UUID(as_uuid=True), ForeignKey('users.id'))
+    comments = relationship('CommentModel', backref='message')
+
+
+    def __repr__(self):
+        return f'Author {self.author} message {self.message}'
+
+
+class CommentModel(Base):
+    __tablename__ = 'comments'
+
+    comment = Column(VARCHAR(255), nullable=False)
+    message_id = Column(UUID(as_uuid=True), ForeignKey('messages.id'))
+    author_id = Column(UUID(as_uuid=True), ForeignKey('users.id'))
+
+    def __repr__(self):
+        return f'Author {self.author} comment {self.comment}'
