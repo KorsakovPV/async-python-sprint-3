@@ -1,4 +1,3 @@
-from sqlalchemy import inspect
 from sqlalchemy.orm import selectinload
 
 from config.config_log import logger
@@ -20,12 +19,8 @@ async def async_main_server():
     await server.main()
 
 
-
-
 async def init_data():
-    # session = get_db_session()
     async with async_session() as session, session.begin():
-        # print(type(session))
 
         # Создаем тестового пользователя
 
@@ -39,8 +34,6 @@ async def init_data():
         #
         # session.add_all(users)
 
-        thing_relations = inspect(UserModel).relationships.items()
-        # stmt = select(UserModel, MessageModel).join(UserModel, UserModel.id==MessageModel.author_id)#.options(selectinload(MessageModel))
         stmt = select(UserModel).options(selectinload(UserModel.messages))
 
         user_list = await session.execute(stmt)
@@ -100,40 +93,11 @@ async def init_data():
 
         logger.info(f'messages {len(messages_list_obj)}')
 
-        # for a1 in result.scalars():
-        #     print(a1)
-        #
-        # result = await session.execute(select(TariffOrderModel).order_by(TariffOrderModel.id))
-        #
-        # a1 = result.scalars().first()
-        #
-        # print(a1.type)
-        #
-        # a1.type = "new data"
-        #
-        # print(a1.type)
-
-        await session.commit()
-
-        # print(a1.type)
-
-        # await conn.add(OrderModel)
-        # await conn.query(OrderModel).all()
-
-        # await conn.execute(
-        #     t1.insert(), [{"name": "some name 1"}, {"name": "some name 2"}]
-        # )
-
-        # async with engine.connect() as conn:
-        #     # select a Result, which will be delivered with buffered
-        #     # results
-        #     result = await conn.execute(select(t1).where(t1.c.name == "some name 1"))
-        #
-        #     print(result.fetchall())
+        # await session.commit()
 
         # for AsyncEngine created in function scope, close and
         # clean-up pooled connections
-        # await engine.dispose()
+        await engine.dispose()
 
 
 asyncio.run(async_main_server())

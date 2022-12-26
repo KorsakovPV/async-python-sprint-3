@@ -14,7 +14,7 @@ async_session = sessionmaker(
 )
 
 # TODO Спросить у наставника какие есть хорошие практики получения сессия в асинхронном коде.
-# async def get_db_session() -> Generator[Session, None, None]:
-#     async with async_session() as session, session.begin():
-#         yield session
-#     await engine.dispose()
+async def get_db_session() -> Generator[Session, None, None]:
+    async with async_session() as session, session.begin():
+        yield session
+    # await engine.dispose()
