@@ -1,16 +1,9 @@
-import asyncio
 import datetime
 import json
 
 from config.config_log import logger
 from config.session import async_session
 from model import MessageModel
-
-from sqlalchemy.orm import selectinload
-
-from config.config_log import logger
-from config.session import async_session, engine
-from model import UserModel, ChatRoomModel, MessageModel
 
 from sqlalchemy.future import select
 
@@ -33,14 +26,15 @@ class Server:
         while message_bytes := await self.reader.readline():
 
             if message_bytes:
-                print(message_bytes)
 
                 addr = writer.get_extra_info('peername')
-                print(addr)
+                logger.info(f'Входящее подключение с адреса {addr}')
 
                 message_dict = json.loads(message_bytes)
-
-                # Создаем сообщение
+                logger.info(
+                    f"Пришло сообщение {message_dict.get('message')} от пользователя "
+                    f"{message_dict.get('author_id')}  в чат {message_dict.get('chat_room_id')}"
+                )
                 message = MessageModel(
                     message=message_dict.get('message'),
                     chat_room_id=message_dict.get('chat_room_id'),
@@ -51,22 +45,19 @@ class Server:
                     await session.commit()
             else:
                 break
-            get_message_from = datetime.datetime.fromtimestamp(message_dict.get('get_message_from'), tz=datetime.timezone.utc)
-            get_message_to = datetime.datetime.fromtimestamp(message_dict.get('get_message_to'), tz=datetime.timezone.utc)
-            print(get_message_from, get_message_to)
-            # get_message_from = datetime.datetime.utcfromtimestamp(message_dict.get('get_message_from')).strftime('%Y-%m-%d %H:%M:%S')
-            # get_message_to = datetime.datetime.utcfromtimestamp(message_dict.get('get_message_from')).strftime('%Y-%m-%d %H:%M:%S')
-            # stmt = select(MessageModel).filter(MessageModel.created_by < dt)
+            get_message_from_max_datetime = datetime.datetime.fromtimestamp(
+                message_dict.get('get_message_to') - 60 * 60, tz=datetime.timezone.utc)
+            get_message_from_datetime = datetime.datetime.fromtimestamp(
+                message_dict.get('get_message_from'), tz=datetime.timezone.utc)
+            get_message_to_datetime = datetime.datetime.fromtimestamp(message_dict.get('get_message_to'),
+                                                             tz=datetime.timezone.utc)
             stmt = select(MessageModel).filter(
-                # MessageModel.created_at < datetime.datetime.fromtimestamp(1672106816.991352, tz=datetime.timezone.utc),
-                # MessageModel.created_at < datetime.datetime.fromtimestamp(1672106816.991352, tz=datetime.timezone.utc),
-
                 MessageModel.chat_room_id == message_dict.get('chat_room_id'),
-                MessageModel.created_at > get_message_from,
-                MessageModel.created_at <= get_message_to,
+                MessageModel.created_at > get_message_from_max_datetime,
+                MessageModel.created_at > get_message_from_datetime,
+                MessageModel.created_at <= get_message_to_datetime,
             )
 
-            # # .options(selectinload(A.bs))
             async with async_session() as session, session.begin():
                 messages_list = await session.execute(stmt)
 
@@ -75,17 +66,17 @@ class Server:
             for a1 in messages_list.scalars():
                 messages_list_obj.append(a1.to_dict)
 
-                # # print(f"Send: {message!r}")
-
             message_json = json.dumps(messages_list_obj) + '\n'
 
-            print(len(messages_list_obj))
-            print('Хотим отправить'+message_json)
+            logger.info(
+                f"Пользователю {message_dict.get('author_id')} отправлено "
+                f"{len(messages_list_obj)} сообщений из чата {message_dict.get('chat_room_id')}"
+            )
 
             writer.write(message_json.encode())
             await writer.drain()
 
-        print("Close the connection")
+        logger.info("Close the connection")
         writer.close()
 
     async def main(self):
@@ -95,7 +86,17 @@ class Server:
             self.handle_echo, self.host, self.port)
 
         addrs = ', '.join(str(sock.getsockname()) for sock in server.sockets)
-        print(f'Serving on {addrs}')
+        logger.info(f'Serving on {addrs}')
 
         async with server:
             await server.serve_forever()
+
+
+async def async_main_server():
+    server = Server()
+
+    await server.main()
+
+
+if __name__ == "__main__":
+    asyncio.run(async_main_server())

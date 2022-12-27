@@ -1,26 +1,12 @@
-from sqlalchemy import VARCHAR, Column, DateTime, sql, text, ForeignKey, TIMESTAMP
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import sql, text, TIMESTAMP
 from sqlalchemy.ext.declarative import as_declarative
-from sqlalchemy.orm import declared_attr, relationship
-from sqlalchemy.sql import func
-from sqlalchemy import BOOLEAN, INTEGER, VARCHAR, Column, Date, Text
-from sqlalchemy.dialects.postgresql import JSONB, UUID
-# from __future__ import annotations
-
-import asyncio
-import datetime
+from sqlalchemy.orm import declared_attr
+from sqlalchemy import VARCHAR, Column
+from sqlalchemy.dialects.postgresql import UUID
 
 from sqlalchemy import ForeignKey
 from sqlalchemy import func
-from sqlalchemy import select
-# from sqlalchemy.ext.asyncio import async_sessionmaker
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.ext.asyncio import create_async_engine
-# from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.orm import Mapped
-# from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
-from sqlalchemy.orm import selectinload
 
 
 @as_declarative()
@@ -29,10 +15,6 @@ class Base:
         UUID(as_uuid=True), primary_key=True, server_default=text('uuid_generate_v4()'),
     )
 
-    # created_at = Column(DateTime(timezone=True), server_default=sql.func.now())
-    # created_by = Column(VARCHAR(255), nullable=True)
-    # updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    # updated_by = Column(VARCHAR(255), nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=sql.func.current_timestamp())
     created_by = Column(VARCHAR(255), nullable=True)
     updated_at = Column(TIMESTAMP(timezone=True), onupdate=func.current_timestamp())

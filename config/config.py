@@ -6,20 +6,6 @@ from pydantic import BaseSettings, HttpUrl, PostgresDsn, validator
 SENTRY_DSN_TEST = ''
 
 class Settings(BaseSettings):
-    # APP_TITLE: str
-    # APP_DESCRIPTION: str
-    # PROXY: str
-    # API_V1_STR: str
-    # WKHTMLTOPDF_PATH: str
-    # DEBUG: bool
-    #
-    # SENTRY_DSN: Optional[HttpUrl] = None
-
-    # @validator('SENTRY_DSN', pre=True)
-    # def sentry_dsn_can_be_blank(cls, value: str) -> Optional[str]:  # noqa 805
-    #     if len(value) == 0:
-    #         return SENTRY_DSN_TEST
-    #     return value
 
     DB_HOST: str = 'localhost'
     DB_USER: str = 'postgres'
@@ -62,10 +48,5 @@ class Settings(BaseSettings):
             port=values.get('TEST_DB_PORT'),
             path=f"/{values.get('TEST_DB_NAME') or ''}",
         )
-
-    # class Config:
-    #     env_file = '.env'
-    #     case_sensitive = True
-
 
 settings = Settings()
