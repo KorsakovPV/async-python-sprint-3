@@ -45,28 +45,13 @@ class Server:
                     await session.commit()
             else:
                 break
-            get_message_from_max_datetime = datetime.datetime.fromtimestamp(
-                message_dict.get('get_message_to') - 60 * 60, tz=datetime.timezone.utc)
-            get_message_from_datetime = datetime.datetime.fromtimestamp(
-                message_dict.get('get_message_from'), tz=datetime.timezone.utc)
-            get_message_to_datetime = datetime.datetime.fromtimestamp(message_dict.get('get_message_to'),
-                                                             tz=datetime.timezone.utc)
-            stmt = select(MessageModel).filter(
-                MessageModel.chat_room_id == message_dict.get('chat_room_id'),
-                MessageModel.created_at > get_message_from_max_datetime,
-                MessageModel.created_at > get_message_from_datetime,
-                MessageModel.created_at <= get_message_to_datetime,
-            )
+            get_message_from = message_dict.get('get_message_from')
+            get_message_to = message_dict.get('get_message_to')
+            chat_room_id = message_dict.get('chat_room_id')
 
-            async with async_session() as session, session.begin():
-                messages_list = await session.execute(stmt)
-
-            messages_list_obj = []
-
-            for a1 in messages_list.scalars():
-                messages_list_obj.append(a1.to_dict)
-
-            message_json = json.dumps(messages_list_obj) + '\n'
+            message_json, messages_list_obj = await self.messages_for_sent_client(chat_room_id,
+                                                                                  get_message_from,
+                                                                                  get_message_to)
 
             logger.info(
                 f"Пользователю {message_dict.get('author_id')} отправлено "
@@ -78,6 +63,28 @@ class Server:
 
         logger.info("Close the connection")
         writer.close()
+
+    async def messages_for_sent_client(self, chat_room_id, get_message_from, get_message_to):
+        get_message_from_max_datetime = datetime.datetime.fromtimestamp(
+            get_message_to - 60 * 60, tz=datetime.timezone.utc)
+        get_message_from_datetime = datetime.datetime.fromtimestamp(
+            get_message_from, tz=datetime.timezone.utc)
+        get_message_to_datetime = datetime.datetime.fromtimestamp(
+            get_message_to, tz=datetime.timezone.utc
+        )
+        stmt = select(MessageModel).filter(
+            MessageModel.chat_room_id == chat_room_id,
+            MessageModel.created_at > get_message_from_max_datetime,
+            MessageModel.created_at > get_message_from_datetime,
+            MessageModel.created_at <= get_message_to_datetime,
+        )
+        async with async_session() as session, session.begin():
+            messages_list = await session.execute(stmt)
+        messages_list_obj = []
+        for a1 in messages_list.scalars():
+            messages_list_obj.append(a1.to_dict)
+        message_json = json.dumps(messages_list_obj) + '\n'
+        return message_json, messages_list_obj
 
     async def main(self):
         logger.info('Стартуем сервер')
