@@ -60,7 +60,7 @@ class ConnectedChatRoomModel(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'))
     chat_room_id = Column(UUID(as_uuid=True), ForeignKey('chat_rooms.id'))
 
-    __table_args__ = (UniqueConstraint('user_id' and 'chat_room_id', name='_user_chat_room_uc'),)
+    # __table_args__ = (UniqueConstraint('user_id' and 'chat_room_id', name='_user_chat_room_uc'),)
 
     @property
     def to_dict(self):
@@ -101,3 +101,13 @@ class CommentModel(Base):
 
     def __repr__(self):
         return f'Author {self.author} comment {self.comment}'
+
+    @property
+    def to_dict(self):
+        return {
+            'id': str(self.id),
+            'comment': self.comment,
+            'message_id': str(self.message_id),
+            'author_id': str(self.author_id),
+            'created_at': self.created_at.timestamp(),
+        }
