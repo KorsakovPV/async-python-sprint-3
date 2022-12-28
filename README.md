@@ -1,13 +1,34 @@
-Указываем в .env переменные окружения
+# Разворачиваем проект
+
+- Указываем в `.env` переменные окружения
 или в
-migrations/env.py и config/config.py
+`migrations/env.py` и `config/config.py`
 
-poetry install
-poetry shell
-alembic upgrade head
+`poetry install`
 
+`poetry shell`
 
+`alembic upgrade head`
 
+`python api.py`
+
+- Создаем пользователя
+POST
+/user/
+    {
+        "name": "pavel"
+    }
+
+- Получаем всех пользователей
+GET /user/
+
+- Создаем Чат
+POST /chat_room/
+    {
+        "name": "chat for pavel"
+    }
+
+-
 
 # Проектное задание третьего спринта
 
