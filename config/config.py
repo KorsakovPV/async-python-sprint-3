@@ -20,7 +20,8 @@ class Settings(BaseSettings):
     TEST_DB_PORT: str = '5432'
     TEST_DB_URL: Optional[Union[PostgresDsn, str]] = ''
 
-    ROOT_DIR: str = ''
+    API_HOST: str = '0.0.0.0'
+    API_PORT: int = '8080'
 
     @validator('DB_URL', pre=True)
     def assemble_db_connection(cls, value: Optional[str], values: Dict[str, Any]) -> Any:

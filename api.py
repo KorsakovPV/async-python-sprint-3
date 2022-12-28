@@ -5,6 +5,7 @@ import pydantic
 from aiohttp import web
 from sqlalchemy.future import select
 
+from config.config import settings
 from config.session import async_session
 from model import ChatRoomModel, CommentModel, ConnectedChatRoomModel, MessageModel, UserModel
 from schemas import ConnectedChatRoomSchema, MassageCreateSchema, MassageGetSchema
@@ -180,12 +181,6 @@ class CommentHandle:
             return web.json_response(status=201)
 
 
-async def handle(request):
-    name = request.match_info.get('name', "Anonymous")
-    text = "Hello, " + name
-    return web.Response(text=text)
-
-
 app = web.Application()
 app.add_routes(
     [
@@ -207,4 +202,4 @@ app.add_routes(
 )
 
 if __name__ == '__main__':
-    web.run_app(app)
+    web.run_app(app, host=settings.API_HOST, port=settings.API_PORT)
