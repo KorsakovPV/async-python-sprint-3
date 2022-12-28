@@ -13,6 +13,8 @@ import asyncio
 
 from config.session import async_session
 
+import aiohttp
+
 
 class Client:
     def __init__(
@@ -81,7 +83,6 @@ async def get_users():
 
         if not users_list_obj:
 
-            # users = []
             for i in range(5):
                 users_list_obj.append(
                     UserModel(
