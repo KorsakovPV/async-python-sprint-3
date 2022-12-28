@@ -17,7 +17,6 @@ pydantic = "^1.10.2"
 asyncpg = "^0.27.0"
 aiohttp = "^3.8.3"
 pytest-asyncio = "^0.20.3"
-redis = "^4.4.0"
 mypy = "^0.991"
 poetry-dotenv-plugin = "^0.1.0"
 
