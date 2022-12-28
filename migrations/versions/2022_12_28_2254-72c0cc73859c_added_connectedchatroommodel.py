@@ -1,8 +1,8 @@
 """Added ConnectedChatRoomModel
 
-Revision ID: a74fbb606b8b
+Revision ID: 72c0cc73859c
 Revises: 71bc60b8f35d
-Create Date: 2022-12-28 19:46:37.933687
+Create Date: 2022-12-28 22:54:24.417553
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'a74fbb606b8b'
+revision = '72c0cc73859c'
 down_revision = '71bc60b8f35d'
 branch_labels = None
 depends_on = None
@@ -28,8 +28,7 @@ def upgrade() -> None:
     sa.Column('chat_room_id', postgresql.UUID(as_uuid=True), nullable=True),
     sa.ForeignKeyConstraint(['chat_room_id'], ['chat_rooms.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('chat_room_id', name='_user_chat_room_uc')
+    sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###
 

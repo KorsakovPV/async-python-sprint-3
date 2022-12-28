@@ -8,7 +8,8 @@ from sqlalchemy.future import select
 from config.config import settings
 from config.session import async_session
 from model import ChatRoomModel, CommentModel, ConnectedChatRoomModel, MessageModel, UserModel
-from schemas import ConnectedChatRoomSchema, MassageCreateSchema, MassageGetSchema
+from schemas import (ConnectedChatRoomSchema, MassageCreateSchema, MassageGetSchema,
+                     CommentCreateSchema)
 from server import Server
 
 
@@ -111,10 +112,11 @@ class MessageHandle:
     @staticmethod
     async def get(request):
         body = await request.json()
-        value = MassageGetSchema(**body)
-
-        if (chat_room_id := value.chat_room_id) is None:
+        try:
+            value = MassageGetSchema(**body)
+        except pydantic.error_wrappers.ValidationError as e:
             return web.json_response(status=400)
+
         if (get_message_from := value.get_message_from) is None:
             get_message_from = 0
         if (get_message_to := value.get_message_to) is None:
@@ -122,13 +124,20 @@ class MessageHandle:
 
         server = Server()
 
-        message_json, _ = await server.messages_for_sent_client(
-            chat_room_id=chat_room_id,
-            get_message_from=float(get_message_from),
-            get_message_to=float(get_message_to),
+        connect_to_chat_at = await server.check_connect_to_chat_room(
+            user_id=value.author_id,
+            chat_room_id=value.chat_room_id
         )
 
-        return web.json_response(body=message_json.encode())
+        if connect_to_chat_at:
+            message_json, _ = await server.messages_for_sent_client(
+                chat_room_id=value.chat_room_id,
+                get_message_from=float(get_message_from),
+                get_message_to=float(get_message_to),
+                connect_to_chat_at=connect_to_chat_at
+            )
+
+            return web.json_response(body=message_json.encode())
 
     @staticmethod
     async def post(request):
@@ -167,7 +176,7 @@ class CommentHandle:
     async def post(request):
         body = await request.json()
         try:
-            comment = MassageGetSchema(**body)
+            comment = CommentCreateSchema(**body)
             async with async_session() as session, session.begin():
                 session.add_all(
                     [

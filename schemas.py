@@ -11,6 +11,7 @@ class MassageCreateSchema(BaseModel):
 
 class MassageGetSchema(BaseModel):
     chat_room_id: UUID
+    author_id: UUID
     get_message_from: float | None
     get_message_to: float | None
 

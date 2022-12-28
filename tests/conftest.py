@@ -1,10 +1,5 @@
 import asyncio
-import os
-import time
-from dataclasses import dataclass
 
-import aiohttp
-# import aioredis
 import pytest
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -12,11 +7,9 @@ from sqlalchemy.orm import selectinload
 from config.session import async_session
 from model import ChatRoomModel, UserModel
 
-# from elasticsearch import AsyncElasticsearch
-# from multidict import CIMultiDictProxy
-#
-# from .config import config
 
+# TODO Спросить у наставкика как асинхронно создавать тестовую базу.
+#  Попросить провести лайвкодинг по асинхронному тестированию. Чем заменить SQL-Utils
 
 @pytest.fixture(scope='session')
 def event_loop():
@@ -24,6 +17,7 @@ def event_loop():
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
+
 
 @pytest.fixture(scope='session')
 async def users():
@@ -50,6 +44,7 @@ async def users():
             session.add_all(users_list_obj)
 
         return users_list_obj
+
 
 @pytest.fixture(scope='session')
 async def chats():
