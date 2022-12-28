@@ -1,19 +1,14 @@
+import asyncio
 import datetime
 import json
 import secrets
 
+from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from config.config_log import logger
-from model import UserModel, ChatRoomModel
-
-from sqlalchemy.future import select
-
-import asyncio
-
 from config.session import async_session
-
-import aiohttp
+from model import ChatRoomModel, ConnectedChatRoomModel, UserModel
 
 
 class Client:
@@ -30,7 +25,8 @@ class Client:
         self.server_host = server_host
         self.server_port = server_port
         self.get_message_from = datetime.datetime.now(
-            tz=datetime.timezone.utc).timestamp() - get_messages_in_time
+            tz=datetime.timezone.utc
+        ).timestamp() - get_messages_in_time
         self.get_message_to = 0
 
     async def connect(self):
@@ -120,12 +116,42 @@ async def get_chats():
         return chat_room_list_obj
 
 
+async def connect_to_chat(user_id, chat_room_id):
+    async with async_session() as session, session.begin():
+        stmt = select(ConnectedChatRoomModel).filter(
+            ConnectedChatRoomModel.chat_room_id == chat_room_id,
+            ConnectedChatRoomModel.user_id == user_id,
+        )
+
+        connect_chat_room_list = await session.execute(stmt)
+
+        connect_chat_room_list_obj = []
+
+        for a1 in connect_chat_room_list.scalars():
+            connect_chat_room_list_obj.append(a1)
+
+        if not connect_chat_room_list_obj:
+
+            connect_chat_room_list_obj.append(
+                ConnectedChatRoomModel(
+                    user_id=user_id,
+                    chat_room_id=chat_room_id,
+                )
+            )
+
+            session.add_all(connect_chat_room_list_obj)
+
+        return connect_chat_room_list_obj
+
+
 async def client_main():
     users = await get_users()
     chats = await get_chats()
 
     user = secrets.choice(users)
     chat = secrets.choice(chats)
+
+    await connect_to_chat(user.id, chat.id)
 
     logger.info(f"Запуск клиента пользователя {user.name} для чата {chat.name}")
 

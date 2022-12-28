@@ -1,11 +1,6 @@
-import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel
-
-
-# from job import JobStatus
 
 
 class MassageCreateSchema(BaseModel):
@@ -20,12 +15,12 @@ class MassageGetSchema(BaseModel):
     get_message_to: float | None
 
 
-# class CommentCreateSchema(BaseModel):
-#     message_id: UUID
-
-
 class CommentCreateSchema(BaseModel):
     comment: str
     message_id: UUID
     author_id: UUID
 
+
+class ConnectedChatRoomSchema(BaseModel):
+    chat_room_id: UUID
+    user_id: UUID

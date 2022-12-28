@@ -1,17 +1,16 @@
 from typing import Any, Dict, Optional, Union
 
-from pydantic import BaseSettings, HttpUrl, PostgresDsn, validator
-
+from pydantic import BaseSettings, PostgresDsn, validator
 
 SENTRY_DSN_TEST = ''
 
-class Settings(BaseSettings):
 
+class Settings(BaseSettings):
     DB_HOST: str = 'localhost'
     DB_USER: str = 'postgres'
     DB_PASSWORD: str = 'postgres'
     DB_NAME: str = 'async_python_sprint_3'
-    DB_PORT: str = 5432
+    DB_PORT: str = '5432'
     DB_URL: Optional[Union[PostgresDsn, str]] = ''
 
     TEST_DB_HOST: str = 'localhost'
@@ -24,7 +23,7 @@ class Settings(BaseSettings):
     ROOT_DIR: str = ''
 
     @validator('DB_URL', pre=True)
-    def assemble_db_connection(cls, value: Optional[str], values: Dict[str, Any]) -> Any:  # noqa 805
+    def assemble_db_connection(cls, value: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(value, str) and value != '':
             return value
         return PostgresDsn.build(  # type: ignore
@@ -37,7 +36,7 @@ class Settings(BaseSettings):
         )
 
     @validator('TEST_DB_URL', pre=True)
-    def assemble_test_db_connection(cls, value: Optional[str], values: Dict[str, Any]) -> Any:  # noqa 805
+    def assemble_test_db_connection(cls, value: Optional[str], values: Dict[str, Any]) -> Any:
         if isinstance(value, str) and value != '':
             return value
         return PostgresDsn.build(  # type: ignore
@@ -48,5 +47,6 @@ class Settings(BaseSettings):
             port=values.get('TEST_DB_PORT'),
             path=f"/{values.get('TEST_DB_NAME') or ''}",
         )
+
 
 settings = Settings()

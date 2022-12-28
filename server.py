@@ -1,70 +1,118 @@
+import asyncio
 import datetime
 import json
 
-from config.config_log import logger
-from config.session import async_session
-from model import MessageModel
-
 from sqlalchemy.future import select
 
-import asyncio
+from config.config_log import logger
+from config.session import async_session
+from model import ConnectedChatRoomModel, MessageModel
+from schemas import MassageCreateSchema, MassageGetSchema
 
 
 class Server:
-    def __init__(self, host="127.0.0.1", port=8888):
+    def __init__(self, host="127.0.0.1", port=8888, number_of_last_available_messages=20):
         self.host = host
         self.port = port
         self.loop = asyncio.get_event_loop()
+        self.number_of_last_available_messages = number_of_last_available_messages
 
     async def listen(self):
         pass
 
     async def handle_echo(self, reader, writer):
+        """
+
+        :param reader:
+        :param writer:
+        :return:
+        """
         self.reader = reader
         self.writer = writer
 
         while message_bytes := await self.reader.readline():
 
-            if message_bytes:
+            # if message_bytes:
 
-                addr = writer.get_extra_info('peername')
-                logger.info(f'Входящее подключение с адреса {addr}')
+            addr = writer.get_extra_info('peername')
+            logger.info(f'Входящее подключение с адреса {addr}')
 
-                message_dict = json.loads(message_bytes)
-                logger.info(
-                    f"Пришло сообщение {message_dict.get('message')} от пользователя "
-                    f"{message_dict.get('author_id')}  в чат {message_dict.get('chat_room_id')}"
-                )
-                message = MessageModel(
-                    message=message_dict.get('message'),
-                    chat_room_id=message_dict.get('chat_room_id'),
-                    author_id=message_dict.get('author_id'),
-                )
-                async with async_session() as session, session.begin():
-                    session.add_all([message])
-                    await session.commit()
-            else:
-                break
-            get_message_from = message_dict.get('get_message_from')
-            get_message_to = message_dict.get('get_message_to')
-            chat_room_id = message_dict.get('chat_room_id')
+            # message_dict = json.loads(message_bytes)
+            value_for_create = MassageCreateSchema(**json.loads(message_bytes))
+            message = value_for_create.message
+            author_id = value_for_create.author_id
+            chat_room_id = value_for_create.chat_room_id
 
-            message_json, messages_list_obj = await self.messages_for_sent_client(chat_room_id,
-                                                                                  get_message_from,
-                                                                                  get_message_to)
+            value_for_sent = MassageGetSchema(**json.loads(message_bytes))
 
-            logger.info(
-                f"Пользователю {message_dict.get('author_id')} отправлено "
-                f"{len(messages_list_obj)} сообщений из чата {message_dict.get('chat_room_id')}"
+            get_message_from = value_for_sent.get_message_from
+            get_message_to = value_for_sent.get_message_to
+            chat_room_id = value_for_sent.chat_room_id
+
+            connect_to_chat_at = await self.check_connect_to_chat_room(
+                user_id=author_id,
+                chat_room_id=chat_room_id
             )
 
-            writer.write(message_json.encode())
+            if connect_to_chat_at:
+                await self.create_message_in_db(author_id, chat_room_id, message)
+
+                message_json = await self.send_message_to_client(
+                    author_id,
+                    chat_room_id,
+                    get_message_from,
+                    get_message_to,
+                    connect_to_chat_at
+                )
+
+                writer.write(message_json.encode())
             await writer.drain()
 
         logger.info("Close the connection")
         writer.close()
 
-    async def messages_for_sent_client(self, chat_room_id, get_message_from, get_message_to):
+    async def send_message_to_client(
+            self,
+            author_id,
+            chat_room_id,
+            get_message_from,
+            get_message_to,
+            connect_to_chat_at,
+    ):
+        message_json, messages_list_obj = await self.messages_for_sent_client(
+            chat_room_id,
+            get_message_from,
+            get_message_to,
+            connect_to_chat_at
+        )
+        logger.info(
+            f"Пользователю {author_id} отправлено "
+            f"{len(messages_list_obj)} сообщений из чата {chat_room_id}"
+        )
+        return message_json
+
+    @staticmethod
+    async def create_message_in_db(author_id, chat_room_id, message):
+        logger.info(
+            f"Пришло сообщение {message} от пользователя "
+            f"{author_id}  в чат {chat_room_id}"
+        )
+        message = MessageModel(
+            message=message,
+            chat_room_id=chat_room_id,
+            author_id=author_id,
+        )
+        async with async_session() as session, session.begin():
+            session.add_all([message])
+            await session.commit()
+
+    async def messages_for_sent_client(
+            self,
+            chat_room_id,
+            get_message_from,
+            get_message_to,
+            connect_to_chat_at
+    ):
         get_message_from_max_datetime = datetime.datetime.fromtimestamp(
             get_message_to - 60 * 60, tz=datetime.timezone.utc)
         get_message_from_datetime = datetime.datetime.fromtimestamp(
@@ -74,10 +122,11 @@ class Server:
         )
         stmt = select(MessageModel).filter(
             MessageModel.chat_room_id == chat_room_id,
+            MessageModel.created_at > connect_to_chat_at,
             MessageModel.created_at > get_message_from_max_datetime,
             MessageModel.created_at > get_message_from_datetime,
             MessageModel.created_at <= get_message_to_datetime,
-        )
+        ).order_by(MessageModel.created_at.desc()).limit(self.number_of_last_available_messages)
         async with async_session() as session, session.begin():
             messages_list = await session.execute(stmt)
         messages_list_obj = []
@@ -97,6 +146,33 @@ class Server:
 
         async with server:
             await server.serve_forever()
+
+    @staticmethod
+    async def check_connect_to_chat_room(user_id, chat_room_id) -> float | None:
+        stmt = select(ConnectedChatRoomModel).filter(
+            ConnectedChatRoomModel.chat_room_id == chat_room_id,
+            ConnectedChatRoomModel.user_id == user_id,
+        )
+        async with async_session() as session, session.begin():
+            link_user_chat_list = await session.execute(stmt)
+
+        link_user_chat_list_obj = []
+
+        for a1 in link_user_chat_list.scalars():
+            link_user_chat_list_obj.append(a1)
+
+        # if not connect_chat_room_list_obj:
+        #
+        #     for i in range(2):
+        #         connect_chat_room_list_obj.append(
+        #             ChatRoomModel(
+        #                 name=f'chat_room_name{i}',
+        #             )
+        #         )
+
+        if link_user_chat_list_obj:
+            return link_user_chat_list_obj[0].created_at
+        return None
 
 
 async def async_main_server():

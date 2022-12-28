@@ -1,17 +1,12 @@
-from sqlalchemy import sql, text, TIMESTAMP
-from sqlalchemy.ext.declarative import as_declarative
-from sqlalchemy.orm import declared_attr
-from sqlalchemy import VARCHAR, Column
+from sqlalchemy import TIMESTAMP, VARCHAR, Column, ForeignKey, UniqueConstraint, func, sql, text
 from sqlalchemy.dialects.postgresql import UUID
-
-from sqlalchemy import ForeignKey
-from sqlalchemy import func
-from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import as_declarative
+from sqlalchemy.orm import declared_attr, relationship
 
 
 @as_declarative()
 class Base:
-    id: UUID = Column(
+    id: Column[UUID] = Column(
         UUID(as_uuid=True), primary_key=True, server_default=text('uuid_generate_v4()'),
     )
 
@@ -29,8 +24,8 @@ class UserModel(Base):
     __tablename__ = 'users'
 
     name = Column(VARCHAR(255), nullable=False)
-    messages = relationship('MessageModel', backref='user')
-    comments = relationship('CommentModel', backref='user')
+    messages = relationship('MessageModel', backref='user')  # type: ignore
+    comments = relationship('CommentModel', backref='user')  # type: ignore
 
     @property
     def to_dict(self):
@@ -45,7 +40,7 @@ class ChatRoomModel(Base):
     __tablename__ = 'chat_rooms'
 
     name = Column(VARCHAR(255), nullable=False)
-    messages = relationship('MessageModel', backref='chat')
+    messages = relationship('MessageModel', backref='chat')  # type: ignore
 
     def __repr__(self):
         return f'ChatRoom {self.name}'
@@ -59,13 +54,29 @@ class ChatRoomModel(Base):
         }
 
 
+class ConnectedChatRoomModel(Base):
+    __tablename__ = 'connected_chat_rooms'
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'))
+    chat_room_id = Column(UUID(as_uuid=True), ForeignKey('chat_rooms.id'))
+
+    __table_args__ = (UniqueConstraint('user_id' and 'chat_room_id', name='_user_chat_room_uc'),)
+
+    @property
+    def to_dict(self):
+        return {
+            'user_id': str(self.user_id),
+            'chat_room_id': str(self.chat_room_id),
+        }
+
+
 class MessageModel(Base):
     __tablename__ = 'messages'
 
     message = Column(VARCHAR(255), nullable=False)
     chat_room_id = Column(UUID(as_uuid=True), ForeignKey('chat_rooms.id'))
     author_id = Column(UUID(as_uuid=True), ForeignKey('users.id'))
-    comments = relationship('CommentModel', backref='message')
+    comments = relationship('CommentModel', backref='message')  # type: ignore
 
     def __repr__(self):
         return f'Author {self.author} message {self.message}'
