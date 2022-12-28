@@ -47,7 +47,7 @@ class ChatRoomHandle:
     @staticmethod
     async def get(request):
         async with async_session() as session, session.begin():
-            stmt = select(MessageModel)
+            stmt = select(ChatRoomModel)
             if chat_room_id := request.match_info.get('chat_room_id'):
                 stmt = stmt.filter(ChatRoomModel.id == chat_room_id)
             chat_rooms_list = await session.execute(stmt)
