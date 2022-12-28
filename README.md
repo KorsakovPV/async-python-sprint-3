@@ -1,3 +1,14 @@
+Указываем в .env переменные окружения
+или в
+migrations/env.py и config/config.py
+
+poetry install
+poetry shell
+alembic upgrade head
+
+
+
+
 # Проектное задание третьего спринта
 
 Спроектируйте и реализуйте мессенджер для получения и обработки сообщений от клиента.
