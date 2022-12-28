@@ -6,12 +6,11 @@ from dataclasses import dataclass
 import aiohttp
 # import aioredis
 import pytest
-
-from config.session import async_session
-from model import UserModel, ChatRoomModel
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
+from config.session import async_session
+from model import ChatRoomModel, UserModel
 
 # from elasticsearch import AsyncElasticsearch
 # from multidict import CIMultiDictProxy
