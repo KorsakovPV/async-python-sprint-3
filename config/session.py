@@ -1,20 +1,29 @@
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from typing import Union
+
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncSession, create_async_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 from config.config import settings
 
-engine = create_async_engine(
-    settings.DB_URL,
-    # echo=True,
-)
 
-async_session = sessionmaker(
-    engine, expire_on_commit=False, class_=AsyncSession
-)
+def create_engine() -> AsyncEngine:
+    return create_async_engine(
+        settings.DB_URL,
+        # echo=True,
+    )
 
 
-# TODO Спросить у наставника какие есть хорошие практики получения сессия в асинхронном коде.
-# async def get_db_session() -> AsyncGenerator[Session, None]:
-#     async with async_session() as session, session.begin():
-#         yield session
-#     # await engine.dispose()
+def create_sessionmaker(bind_engine: Union[AsyncEngine, AsyncConnection]) -> sessionmaker:
+    return sessionmaker(
+        bind=bind_engine,
+        autoflush=False,
+        expire_on_commit=False,
+        future=True,
+        class_=AsyncSession,
+    )
+
+
+engine = create_engine()
+async_session = create_sessionmaker(engine)
+
+Base = declarative_base(bind=engine)

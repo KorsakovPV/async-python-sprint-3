@@ -8,8 +8,8 @@ from sqlalchemy.future import select
 from config.config import settings
 from config.session import async_session
 from model import ChatRoomModel, CommentModel, ConnectedChatRoomModel, MessageModel, UserModel
-from schemas import (ConnectedChatRoomSchema, MassageCreateSchema, MassageGetSchema,
-                     CommentCreateSchema)
+from schemas import (CommentCreateSchema, ConnectedChatRoomSchema, MassageCreateSchema,
+                     MassageGetSchema)
 from server import Server
 
 
