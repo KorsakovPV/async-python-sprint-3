@@ -9,20 +9,18 @@ import pytest_asyncio
 from _pytest.monkeypatch import MonkeyPatch
 from sqlalchemy import text
 from sqlalchemy.engine import URL, make_url
+# from my_async_app.db import Base, create_engine, create_sessionmaker
+# from my_async_app.fastapi_app import app
+# from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import (AsyncConnection, AsyncEngine, AsyncSession, AsyncTransaction,
                                     create_async_engine)
 from sqlalchemy.orm import DeclarativeMeta
 
 from config.config import settings
-from config.session import create_sessionmaker
+from config.session import create_engine, create_sessionmaker
 from model import Base
 
-
-def create_engine_test() -> AsyncEngine:
-    return create_async_engine(
-        settings.TEST_DB_URL,
-        # echo=True,
-    )
+settings.database_url = f'{settings.database_url}_test'
 
 @dataclass
 class DBUtils:
@@ -40,13 +38,8 @@ class DBUtils:
         return create_async_engine(self.url, isolation_level='AUTOCOMMIT')
 
     async def create_database(self) -> None:
-        query = text(f"CREATE DATABASE {self._parsed_url.database} ENCODING 'utf8';")
+        query = text(f"CREATE DATABASE {self._parsed_url.database} ENCODING 'utf8'")
         async with self.postgres_engine.connect() as conn:
-            await conn.execute(query)
-
-    async def create_extensions(self) -> None:
-        query = text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";')
-        async with self.db_engine.begin() as conn:
             await conn.execute(query)
 
     async def create_tables(self, base: DeclarativeMeta) -> None:
@@ -78,11 +71,12 @@ async def create_db(url: str, base: DeclarativeMeta) -> None:
             await db_utils.drop_database()
 
         await db_utils.create_database()
-        await db_utils.create_extensions()
         await db_utils.create_tables(base)
     finally:
         await db_utils.postgres_engine.dispose()
         await db_utils.db_engine.dispose()
+
+
 
 
 @pytest.fixture(scope='session')
@@ -94,12 +88,12 @@ def event_loop() -> Generator[AbstractEventLoop, None, None]:
 
 @pytest_asyncio.fixture(scope='session', autouse=True)
 async def _create_db() -> None:
-    await create_db(url=settings.TEST_DB_URL, base=Base)
+    await create_db(url=settings.database_url, base=Base)
 
 
 @pytest_asyncio.fixture()
-async def engine_test() -> AsyncGenerator[AsyncEngine, None]:
-    engine = create_engine_test()
+async def engine() -> AsyncGenerator[AsyncEngine, None]:
+    engine = create_engine()
     try:
         yield engine
     finally:
@@ -107,30 +101,29 @@ async def engine_test() -> AsyncGenerator[AsyncEngine, None]:
 
 
 @pytest_asyncio.fixture()
-async def db_test_connection(engine_test: AsyncEngine) -> AsyncGenerator[AsyncConnection, None]:
-    async with engine_test.connect() as test_connection:
-        yield test_connection
+async def db_connection(engine: AsyncEngine) -> AsyncGenerator[AsyncConnection, None]:
+    async with engine.connect() as connection:
+        yield connection
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def db_transaction(db_test_connection: AsyncConnection) -> AsyncGenerator[AsyncTransaction, None]:
+async def db_transaction(db_connection: AsyncConnection) -> AsyncGenerator[AsyncTransaction, None]:
     """
     Recipe for using transaction rollback in tests
     https://docs.sqlalchemy.org/en/14/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites  # noqa
     """
-    async with db_test_connection.begin() as transaction:
+    async with db_connection.begin() as transaction:
         yield transaction
         await transaction.rollback()
 
 
 @pytest_asyncio.fixture(autouse=True)
 async def session(
-        db_test_connection: AsyncConnection,
+        db_connection: AsyncConnection,
         monkeypatch: MonkeyPatch
 ) -> AsyncGenerator[AsyncSession, None]:
-    session_maker = create_sessionmaker(db_test_connection)
-    # monkeypatch.setattr('my_async_app.some_functions.Session', session_maker)
-    # monkeypatch.setattr('api.async_session', session_maker)
+    session_maker = create_sessionmaker(db_connection)
+    monkeypatch.setattr('my_async_app.some_functions.Session', session_maker)
 
     async with session_maker() as session:
         yield session
