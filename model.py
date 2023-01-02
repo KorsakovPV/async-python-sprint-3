@@ -1,4 +1,4 @@
-from sqlalchemy import TIMESTAMP, VARCHAR, Column, ForeignKey, UniqueConstraint, func, sql, text
+from sqlalchemy import TIMESTAMP, VARCHAR, Column, ForeignKey, func, sql, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import as_declarative
 from sqlalchemy.orm import declared_attr, relationship
@@ -57,10 +57,16 @@ class ChatRoomModel(Base):
 class ConnectedChatRoomModel(Base):
     __tablename__ = 'connected_chat_rooms'
 
-    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id'))
-    chat_room_id = Column(UUID(as_uuid=True), ForeignKey('chat_rooms.id'))
-
-    # __table_args__ = (UniqueConstraint('user_id' and 'chat_room_id', name='_user_chat_room_uc'),)
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey('users.id', ondelete='CASCADE'),
+        nullable=False
+    )
+    chat_room_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey('chat_rooms.id', ondelete='CASCADE'),
+        nullable=False
+    )
 
     @property
     def to_dict(self):
@@ -74,8 +80,16 @@ class MessageModel(Base):
     __tablename__ = 'messages'
 
     message = Column(VARCHAR(255), nullable=False)
-    chat_room_id = Column(UUID(as_uuid=True), ForeignKey('chat_rooms.id'))
-    author_id = Column(UUID(as_uuid=True), ForeignKey('users.id'))
+    chat_room_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey('chat_rooms.id', ondelete='CASCADE'),
+        nullable=False
+    )
+    author_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey('users.id', ondelete='CASCADE'),
+        nullable=False
+    )
     comments = relationship('CommentModel', backref='message')  # type: ignore
 
     def __repr__(self):
@@ -96,8 +110,16 @@ class CommentModel(Base):
     __tablename__ = 'comments'
 
     comment = Column(VARCHAR(255), nullable=False)
-    message_id = Column(UUID(as_uuid=True), ForeignKey('messages.id'))
-    author_id = Column(UUID(as_uuid=True), ForeignKey('users.id'))
+    message_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey('messages.id', ondelete='CASCADE'),
+        nullable=False
+    )
+    author_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey('users.id', ondelete='CASCADE'),
+        nullable=False
+    )
 
     def __repr__(self):
         return f'Author {self.author} comment {self.comment}'

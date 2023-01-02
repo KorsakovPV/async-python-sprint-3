@@ -115,7 +115,7 @@ class MessageHandle:
         try:
             value = MassageGetSchema(**body)
         except pydantic.error_wrappers.ValidationError as e:
-            return web.json_response(status=400)
+            return web.json_response(status=400, body=str(e).encode())
 
         if (get_message_from := value.get_message_from) is None:
             get_message_from = 0
@@ -196,7 +196,6 @@ app.add_routes(
         web.get('/user/', UserHandle.get),
         web.get('/user/{user_id}', UserHandle.get),
         web.post('/user/', UserHandle.post),
-        web.get('/user/', UserHandle.get),
         web.get('/chat_room/', ChatRoomHandle.get),
         web.get('/chat_room/{chat_room_id}', ChatRoomHandle.get),
         web.post('/chat_room/', ChatRoomHandle.post),

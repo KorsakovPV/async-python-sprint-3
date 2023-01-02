@@ -59,7 +59,7 @@
 
 - Получаем сообщения из чата
 
-        POST /message/
+        GET /message/
         {
             "author_id": "a87dec77-6143-4b0b-be79-451d1e3b92f4",
             "chat_room_id": "7642d912-23dd-4667-af7a-f815a1b8dc44"
