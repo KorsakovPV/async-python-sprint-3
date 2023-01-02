@@ -15,11 +15,11 @@ config = context.config
 
 section = config.config_ini_section
 
-config.set_section_option(section, "DB_USER", os.getenv("DB_USER", 'postgres'))
-config.set_section_option(section, "DB_PASSWORD", os.getenv("DB_PASSWORD", 'postgres'))
-config.set_section_option(section, "DB_NAME", os.getenv("DB_NAME", 'async_python_sprint_3'))
-config.set_section_option(section, "DB_HOST", os.getenv("DB_HOST", 'localhost'))
-config.set_section_option(section, "DB_PORT", os.getenv("DB_PORT", '5432'))
+config.set_section_option(section, 'DB_USER', os.getenv('DB_USER', 'postgres'))
+config.set_section_option(section, 'DB_PASSWORD', os.getenv('DB_PASSWORD', 'postgres'))
+config.set_section_option(section, 'DB_NAME', os.getenv('DB_NAME', 'async_python_sprint_3'))
+config.set_section_option(section, 'DB_HOST', os.getenv('DB_HOST', 'localhost'))
+config.set_section_option(section, 'DB_PORT', os.getenv('DB_PORT', '5432'))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -36,7 +36,7 @@ target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
+# my_important_option = config.get_main_option('my_important_option')
 # ... etc.
 
 
@@ -52,12 +52,12 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = config.get_main_option('sqlalchemy.url')
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
+        dialect_opts={'paramstyle': 'named'},
     )
 
     with context.begin_transaction():
@@ -81,7 +81,7 @@ async def run_migrations_online() -> None:
     connectable = AsyncEngine(
         engine_from_config(
             config.get_section(config.config_ini_section),
-            prefix="sqlalchemy.",
+            prefix='sqlalchemy.',
             poolclass=pool.NullPool,
             future=True,
         )

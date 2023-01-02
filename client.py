@@ -16,7 +16,7 @@ class Client:
             self,
             user_id,
             chat_room_id,
-            server_host="127.0.0.1",
+            server_host='127.0.0.1',
             server_port=8888,
             get_messages_in_time=5 * 60
     ):
@@ -38,7 +38,7 @@ class Client:
             await self.send(reader, writer, 1)
             writer.close()
 
-        logger.info("Close the connection")
+        logger.info('Close the connection')
 
     async def send(self, reader, writer, i):
         self.get_message_to = datetime.datetime.now(tz=datetime.timezone.utc).timestamp()
@@ -55,9 +55,9 @@ class Client:
 
         self.datetime_last_request = datetime.datetime.now()
         await writer.drain()
-        logger.info(f"Отправлено сообщение для чата {self.chat_room_id}")
+        logger.info(f'Отправлено сообщение для чата {self.chat_room_id}')
         data = await reader.readline()
-        logger.info(f"Получены сообщения {data} для чата {self.chat_room_id}")
+        logger.info(f'Получены сообщения {data} для чата {self.chat_room_id}')
 
         logger.info('Close the connection')
         writer.close()
@@ -153,7 +153,7 @@ async def client_main():
 
     await connect_to_chat(user.id, chat.id)
 
-    logger.info(f"Запуск клиента пользователя {user.name} для чата {chat.name}")
+    logger.info(f'Запуск клиента пользователя {user.name} для чата {chat.name}')
 
     client = Client(
         user_id=str(user.id),
@@ -163,5 +163,5 @@ async def client_main():
     await client.connect()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     asyncio.run(client_main())

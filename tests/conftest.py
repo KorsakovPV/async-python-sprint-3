@@ -14,8 +14,8 @@ from sqlalchemy.ext.asyncio import (AsyncConnection, AsyncEngine, AsyncSession, 
 from sqlalchemy.orm import DeclarativeMeta
 
 from config.config import settings
-from config.session import create_sessionmaker
-from model import Base
+from config.session import create_engine, create_sessionmaker
+from model import Base, ChatRoomModel, ConnectedChatRoomModel, MessageModel, UserModel
 
 
 def create_engine_test() -> AsyncEngine:
@@ -23,6 +23,11 @@ def create_engine_test() -> AsyncEngine:
         settings.TEST_DB_URL,
         # echo=True,
     )
+
+
+engine_test = create_engine_test()
+async_session_test = create_sessionmaker(engine_test)
+
 
 @dataclass
 class DBUtils:
@@ -40,7 +45,7 @@ class DBUtils:
         return create_async_engine(self.url, isolation_level='AUTOCOMMIT')
 
     async def create_database(self) -> None:
-        query = text(f"CREATE DATABASE {self._parsed_url.database} ENCODING 'utf8';")
+        query = text(f'CREATE DATABASE {self._parsed_url.database} ENCODING "utf8";')
         async with self.postgres_engine.connect() as conn:
             await conn.execute(query)
 
@@ -87,7 +92,7 @@ async def create_db(url: str, base: DeclarativeMeta) -> None:
 
 @pytest.fixture(scope='session')
 def event_loop() -> Generator[AbstractEventLoop, None, None]:
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     yield loop
     loop.close()
 
@@ -107,13 +112,24 @@ async def engine_test() -> AsyncGenerator[AsyncEngine, None]:
 
 
 @pytest_asyncio.fixture()
+async def engine() -> AsyncGenerator[AsyncEngine, None]:
+    engine = create_engine()
+    try:
+        yield engine
+    finally:
+        await engine.dispose()
+
+
+@pytest_asyncio.fixture()
 async def db_test_connection(engine_test: AsyncEngine) -> AsyncGenerator[AsyncConnection, None]:
     async with engine_test.connect() as test_connection:
         yield test_connection
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def db_transaction(db_test_connection: AsyncConnection) -> AsyncGenerator[AsyncTransaction, None]:
+async def db_transaction(
+        db_test_connection: AsyncConnection
+) -> AsyncGenerator[AsyncTransaction, None]:
     """
     Recipe for using transaction rollback in tests
     https://docs.sqlalchemy.org/en/14/orm/session_transaction.html#joining-a-session-into-an-external-transaction-such-as-for-test-suites  # noqa
@@ -125,17 +141,78 @@ async def db_transaction(db_test_connection: AsyncConnection) -> AsyncGenerator[
 
 @pytest_asyncio.fixture(autouse=True)
 async def session(
-        db_test_connection: AsyncConnection,
         monkeypatch: MonkeyPatch
 ) -> AsyncGenerator[AsyncSession, None]:
-    session_maker = create_sessionmaker(db_test_connection)
-    # monkeypatch.setattr('my_async_app.some_functions.Session', session_maker)
-    # monkeypatch.setattr('api.async_session', session_maker)
+    monkeypatch.setattr('api.async_session', async_session_test)
 
-    async with session_maker() as session:
+    async with async_session_test() as session:
         yield session
 
-# @pytest_asyncio.fixture()
-# async def client() -> AsyncGenerator[AsyncClient, None]:
-#     async with AsyncClient(app=app, base_url='http://test') as client:
-#         yield client
+
+@pytest_asyncio.fixture()
+async def user() -> AsyncGenerator[UserModel, None]:
+    async with async_session_test() as session, session.begin():
+        user = UserModel(name='user_test')
+        session.add(user)
+    yield user
+
+
+@pytest_asyncio.fixture()
+async def user_json() -> dict:
+    return {
+        'name': 'user_test',
+    }
+
+
+@pytest_asyncio.fixture()
+async def chat_room() -> AsyncGenerator[UserModel, None]:
+    async with async_session_test() as session, session.begin():
+        chat_room = ChatRoomModel(name='chat_room_test')
+        session.add(chat_room)
+    yield chat_room
+
+
+@pytest_asyncio.fixture()
+async def chat_room_json() -> dict:
+    return {
+        'name': 'user_test',
+    }
+
+
+@pytest_asyncio.fixture()
+async def connect_chat(user, chat_room) -> AsyncGenerator[UserModel, None]:
+    async with async_session_test() as session, session.begin():
+        connect_chat = ConnectedChatRoomModel(
+            user_id=user.id,
+            chat_room_id=chat_room.id,
+        )
+        session.add(connect_chat)
+    yield connect_chat
+
+
+@pytest_asyncio.fixture()
+async def connect_chat_json() -> dict:
+    return {
+        'name': 'user_test',
+    }
+
+
+@pytest_asyncio.fixture()
+async def message(user, chat_room) -> AsyncGenerator[UserModel, None]:
+    async with async_session_test() as session, session.begin():
+        message = MessageModel(
+            author_id=user.id,
+            chat_room_id=chat_room.id,
+            message='test_message',
+        )
+        session.add(message)
+    yield message
+
+
+@pytest_asyncio.fixture()
+async def message_json(connect_chat) -> dict:
+    return {
+        'message': 'message',
+        'chat_room_id': str(connect_chat.chat_room_id),
+        'author_id': str(connect_chat.user_id),
+    }
