@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import json
+from asyncio import StreamReader, StreamWriter
 from uuid import UUID
 
 from sqlalchemy.future import select
@@ -23,15 +24,15 @@ class Server:
         self.loop = asyncio.new_event_loop()
         self.number_of_last_available_messages: int = number_of_last_available_messages
 
-    async def handle_echo(self, reader, writer):
+    async def handle_echo(self, reader: StreamReader, writer: StreamWriter):
         """
 
         :param reader:
         :param writer:
         :return:
         """
-        self.reader = reader
-        self.writer = writer
+        self.reader: StreamReader = reader
+        self.writer: StreamWriter = writer
 
         while message_bytes := await self.reader.readline():
 
