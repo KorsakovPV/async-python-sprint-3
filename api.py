@@ -34,11 +34,7 @@ class UserHandle:
         if name := body.get('name'):
             user = UserModel(name=name)
             async with async_session() as session, session.begin():
-                session.add_all(
-                    [
-                        user,
-                    ]
-                )
+                session.add(user)
                 await session.commit()
             return web.json_response(status=201)
         return web.json_response(status=400)
@@ -64,11 +60,7 @@ class ChatRoomHandle:
         if name := body.get('name'):
             chat_room = ChatRoomModel(name=name)
             async with async_session() as session, session.begin():
-                session.add_all(
-                    [
-                        chat_room,
-                    ]
-                )
+                session.add(chat_room)
                 await session.commit()
             return web.json_response(status=201)
         return web.json_response(status=400)
@@ -95,11 +87,7 @@ class ConnectHandle:
         try:
             value = ConnectedChatRoomSchema(**body)
             async with async_session() as session, session.begin():
-                session.add_all(
-                    [
-                        ConnectedChatRoomModel(**value.__dict__),
-                    ]
-                )
+                session.add(ConnectedChatRoomModel(**value.__dict__))
                 await session.commit()
         except pydantic.error_wrappers.ValidationError as e:
             return web.json_response(status=400, body=str(e).encode())
@@ -145,11 +133,7 @@ class MessageHandle:
         try:
             message = MassageCreateSchema(**body)
             async with async_session() as session, session.begin():
-                session.add_all(
-                    [
-                        MessageModel(**message.__dict__),
-                    ]
-                )
+                session.add(MessageModel(**message.__dict__))
                 await session.commit()
         except pydantic.error_wrappers.ValidationError as e:
             return web.json_response(status=400, body=str(e).encode())
@@ -178,11 +162,7 @@ class CommentHandle:
         try:
             comment = CommentCreateSchema(**body)
             async with async_session() as session, session.begin():
-                session.add_all(
-                    [
-                        CommentModel(**comment.__dict__),
-                    ]
-                )
+                session.add(CommentModel(**comment.__dict__))
                 await session.commit()
         except pydantic.error_wrappers.ValidationError as e:
             return web.json_response(status=400, body=str(e).encode())

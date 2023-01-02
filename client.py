@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import json
 import secrets
+from uuid import UUID
 
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -14,37 +15,38 @@ from model import ChatRoomModel, ConnectedChatRoomModel, UserModel
 class Client:
     def __init__(
             self,
-            user_id,
-            chat_room_id,
-            server_host='127.0.0.1',
-            server_port=8888,
-            get_messages_in_time=5 * 60
+            user_id: UUID,
+            chat_room_id: UUID,
+            server_host: str = '127.0.0.1',
+            server_port: int = 8888,
+            get_messages_in_time: int = 5 * 60
     ):
-        self.user_id = user_id
-        self.chat_room_id = chat_room_id
-        self.server_host = server_host
-        self.server_port = server_port
-        self.get_message_from = datetime.datetime.now(
+        self.user_id: UUID = user_id
+        self.chat_room_id: UUID = chat_room_id
+        self.server_host: str = server_host
+        self.server_port: int = server_port
+        self.get_message_from: float = datetime.datetime.now(
             tz=datetime.timezone.utc
         ).timestamp() - get_messages_in_time
-        self.get_message_to = 0
+        self.get_message_to: float = 0.0
 
     async def connect(self):
         for i in range(20):
             logger.info('Open the connection')
             reader, writer = await asyncio.open_connection(self.server_host,
                                                            self.server_port)
+            message: str = f'Сообщение {i} от {self.user_id}'
 
-            await self.send(reader, writer, 1)
+            await self.send(reader, writer, message)
             writer.close()
 
         logger.info('Close the connection')
 
-    async def send(self, reader, writer, i):
+    async def send(self, reader, writer, message: str):
         self.get_message_to = datetime.datetime.now(tz=datetime.timezone.utc).timestamp()
         message = json.dumps(
             {
-                'message': f'Сообщение {i} от {self.user_id}',
+                'message': message,
                 'chat_room_id': self.chat_room_id,
                 'author_id': self.user_id,
                 'get_message_from': self.get_message_from,
@@ -55,9 +57,9 @@ class Client:
 
         self.datetime_last_request = datetime.datetime.now()
         await writer.drain()
-        logger.info(f'Отправлено сообщение для чата {self.chat_room_id}')
+        logger.info(f'Message sent for chat {self.chat_room_id}')
         data = await reader.readline()
-        logger.info(f'Получены сообщения {data} для чата {self.chat_room_id}')
+        logger.info(f'Arrived messages {data} for chat {self.chat_room_id}')
 
         logger.info('Close the connection')
         writer.close()
@@ -131,7 +133,6 @@ async def connect_to_chat(user_id, chat_room_id):
             connect_chat_room_list_obj.append(a1)
 
         if not connect_chat_room_list_obj:
-
             connect_chat_room_list_obj.append(
                 ConnectedChatRoomModel(
                     user_id=user_id,

@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import json
+from uuid import UUID
 
 from sqlalchemy.future import select
 
@@ -11,11 +12,16 @@ from schemas import MassageCreateSchema, MassageGetSchema
 
 
 class Server:
-    def __init__(self, host='127.0.0.1', port=8888, number_of_last_available_messages=20):
-        self.host = host
-        self.port = port
-        self.loop = asyncio.get_event_loop()
-        self.number_of_last_available_messages = number_of_last_available_messages
+    def __init__(
+            self,
+            host: str = '127.0.0.1', port: int = 8888,
+            number_of_last_available_messages: int = 20
+    ):
+
+        self.host: str = host
+        self.port: int = port
+        self.loop = asyncio.new_event_loop()
+        self.number_of_last_available_messages: int = number_of_last_available_messages
 
     async def handle_echo(self, reader, writer):
         """
@@ -29,11 +35,9 @@ class Server:
 
         while message_bytes := await self.reader.readline():
 
-
             addr = writer.get_extra_info('peername')
-            logger.info(f'Входящее подключение с адреса {addr}')
+            logger.info(f'Incoming connection from address {addr}')
 
-            # message_dict = json.loads(message_bytes)
             value_for_create = MassageCreateSchema(**json.loads(message_bytes))
             message = value_for_create.message
             author_id = value_for_create.author_id
@@ -68,11 +72,11 @@ class Server:
 
     async def send_message_to_client(
             self,
-            author_id,
-            chat_room_id,
-            get_message_from,
-            get_message_to,
-            connect_to_chat_at,
+            author_id: UUID,
+            chat_room_id: UUID,
+            get_message_from: float,
+            get_message_to: float,
+            connect_to_chat_at: float,
     ):
         message_json, messages_list_obj = await self.messages_for_sent_client(
             chat_room_id,
@@ -81,21 +85,21 @@ class Server:
             connect_to_chat_at
         )
         logger.info(
-            f'Пользователю {author_id} отправлено '
-            f'{len(messages_list_obj)} сообщений из чата {chat_room_id}'
+            f'User {author_id} send '
+            f'{len(messages_list_obj)} message from chat {chat_room_id}'
         )
         return message_json
 
     @staticmethod
-    async def create_message_in_db(author_id, chat_room_id, message):
+    async def create_message_in_db(author_id: UUID, chat_room_id: UUID, message: str) -> None:
         logger.info(
-            f'Пришло сообщение {message} от пользователя '
-            f'{author_id}  в чат {chat_room_id}'
+            f'Arrived {message} from user '
+            f'{author_id} in chat {chat_room_id}'
         )
         message = MessageModel(
-            message=message,
-            chat_room_id=chat_room_id,
-            author_id=author_id,
+            message=message,  # type: ignore
+            chat_room_id=chat_room_id,  # type: ignore
+            author_id=author_id,  # type: ignore
         )
         async with async_session() as session, session.begin():
             session.add_all([message])
@@ -103,10 +107,10 @@ class Server:
 
     async def messages_for_sent_client(
             self,
-            chat_room_id,
-            get_message_from,
-            get_message_to,
-            connect_to_chat_at
+            chat_room_id: UUID,
+            get_message_from: float,
+            get_message_to: float,
+            connect_to_chat_at: float
     ):
         get_message_from_max_datetime = datetime.datetime.fromtimestamp(
             get_message_to - 60 * 60, tz=datetime.timezone.utc)
@@ -131,7 +135,7 @@ class Server:
         return message_json, messages_list_obj
 
     async def main(self):
-        logger.info('Стартуем сервер')
+        logger.info('Start server.')
 
         server = await asyncio.start_server(
             self.handle_echo, self.host, self.port)
