@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import (AsyncConnection, AsyncEngine, AsyncSession, 
 from sqlalchemy.orm import DeclarativeMeta
 
 from config.config import settings
-from config.session import create_engine, create_sessionmaker
+from config.session import create_sessionmaker
 from model import Base, ChatRoomModel, ConnectedChatRoomModel, MessageModel, UserModel
 
 
@@ -105,15 +105,6 @@ async def _create_db() -> None:
 @pytest_asyncio.fixture()
 async def engine_test() -> AsyncGenerator[AsyncEngine, None]:
     engine = create_engine_test()
-    try:
-        yield engine
-    finally:
-        await engine.dispose()
-
-
-@pytest_asyncio.fixture()
-async def engine() -> AsyncGenerator[AsyncEngine, None]:
-    engine = create_engine()
     try:
         yield engine
     finally:
