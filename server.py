@@ -34,7 +34,7 @@ class Server:
         self.reader: StreamReader = reader
         self.writer: StreamWriter = writer
 
-        while message_bytes := await self.reader.readline():
+        while message_bytes := await self.reader.read():
 
             addr = writer.get_extra_info('peername')
             logger.info(f'Incoming connection from address {addr}')
