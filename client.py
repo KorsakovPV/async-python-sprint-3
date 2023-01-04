@@ -31,7 +31,7 @@ class Client:
         self.get_message_to: float = 0.0
 
     async def connect(self):
-        for i in range(20):
+        for i in range(1000):
             logger.info('Open the connection')
             reader, writer = await asyncio.open_connection(self.server_host,
                                                            self.server_port)
@@ -52,9 +52,9 @@ class Client:
                 'get_message_from': self.get_message_from,
                 'get_message_to': self.get_message_to,
             }
-        ) + '\n'
+        )
         writer.write(message.encode())
-
+        writer.write_eof()
         self.datetime_last_request = datetime.datetime.now()
         await writer.drain()
         logger.info(f'Message sent for chat {self.chat_room_id}')
@@ -65,7 +65,7 @@ class Client:
         writer.close()
         self.get_message_from = self.get_message_to
 
-        await asyncio.sleep(5)
+        # await asyncio.sleep(1)
 
 
 async def get_users():
@@ -157,8 +157,8 @@ async def client_main():
     logger.info(f'Запуск клиента пользователя {user.name} для чата {chat.name}')
 
     client = Client(
-        user_id=str(user.id),
-        chat_room_id=str(chat.id),
+        user_id=user.id,
+        chat_room_id=chat.id,
     )
 
     await client.connect()
